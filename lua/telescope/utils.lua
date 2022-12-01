@@ -432,6 +432,18 @@ local load_once = function(f)
   end
 end
 
+local function try_get_icon_after_uppercase(basename, devicons)
+  local found = basename:find("[a-z][A-Z]")
+  local strAfterFound = basename
+  local icon, icon_highlight
+  while icon == nil and found ~= nil do
+    strAfterFound = strAfterFound:sub(found+1, #basename)
+    found = strAfterFound:find("[a-z][A-Z]")
+    icon, icon_highlight = devicons.get_icon(basename, strAfterFound, { default = false })
+  end
+  return icon, icon_highlight
+end
+
 utils.transform_devicons = load_once(function()
   local has_devicons, devicons = pcall(require, "nvim-web-devicons")
 
@@ -446,7 +458,11 @@ utils.transform_devicons = load_once(function()
         return display
       end
 
-      local icon, icon_highlight = devicons.get_icon(utils.path_tail(filename), nil, { default = true })
+      local basename = utils.path_tail(filename)
+      local icon, icon_highlight = try_get_icon_after_uppercase(basename, devicons)
+      if icon == nil then
+        icon, icon_highlight = devicons.get_icon(basename, vim.fn.fnamemodify(basename, ":e:e"), { default = true })
+      end
       local icon_display = (icon or " ") .. " " .. (display or "")
 
       if conf.color_devicons then
@@ -476,7 +492,12 @@ utils.get_devicons = load_once(function()
         return ""
       end
 
-      local icon, icon_highlight = devicons.get_icon(utils.path_tail(filename), nil, { default = true })
+      local basename = utils.path_tail(filename)
+      local icon, icon_highlight = try_get_icon_after_uppercase(basename, devicons)
+      if icon == nil then
+        icon, icon_highlight = devicons.get_icon(basename, vim.fn.fnamemodify(basename, ":e:e"), { default = true })
+      end
+
       if conf.color_devicons then
         return icon, icon_highlight
       else
